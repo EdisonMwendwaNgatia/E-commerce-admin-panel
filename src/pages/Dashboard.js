@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { db } from "../firebase/firebase";
 import { ref, get, remove, update, set, push } from "firebase/database";
 import styled from "styled-components";
+import { v4 as uuidv4 } from 'uuid';
+
 
 // Main container styles
 const DashboardContainer = styled.div`
@@ -228,11 +230,13 @@ const Dashboard = () => {
   const [products, setProducts] = useState([]);
   const [newProduct, setNewProduct] = useState({
     name: "",
+    description: "", // Now this will be saved in Firebase
     price: "",
     category: "",
     image: "",
     availability: true,
   });
+
   const [editingProduct, setEditingProduct] = useState(null);
 
   useEffect(() => {
@@ -257,15 +261,28 @@ const Dashboard = () => {
 
   const addProduct = (e) => {
     e.preventDefault();
-    const newProductRef = push(ref(db, "products"));
-    set(newProductRef, {
-      ...newProduct,
+    const newProductId = uuidv4().slice(0, 8); // Short UUID for uniqueness
+  
+    const productData = {
+      id: newProductId,
+      name: newProduct.name,
+      description: newProduct.description, // <-- Now saving description properly
       price: Number(newProduct.price),
-    }).then(() => {
-      setProducts([...products, { id: newProductRef.key, ...newProduct }]);
-      setNewProduct({ name: "", price: "", category: "", image: "", availability: true });
-    }).catch((error) => console.error("Error adding product:", error));
+      category: newProduct.category,
+      image: newProduct.image,
+      availability: true,
+    };
+  
+    // Push product to Firebase
+    set(ref(db, `products/${newProductId}`), productData)
+      .then(() => {
+        console.log("Product added successfully:", productData);
+        setProducts([...products, productData]); // Ensure products state updates correctly
+        setNewProduct({ name: "", description: "", price: "", category: "", image: "", availability: true });
+      })
+      .catch((error) => console.error("Error adding product:", error));
   };
+  
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -310,48 +327,63 @@ const Dashboard = () => {
       </Stats>
 
       {/* Product Addition Form */}
-      <FormContainer>
-        <FormTitle>Add New Product</FormTitle>
-        <Form onSubmit={addProduct}>
-          <FormField>
-            <InputLabel>Product Name</InputLabel>
-            <Input
-              type="text"
-              value={newProduct.name}
-              onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
-              required
-            />
-          </FormField>
-          <FormField>
-            <InputLabel>Price</InputLabel>
-            <Input
-              type="number"
-              value={newProduct.price}
-              onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
-              required
-            />
-          </FormField>
-          <FormField>
-            <InputLabel>Category</InputLabel>
-            <Input
-              type="text"
-              value={newProduct.category}
-              onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
-              required
-            />
-          </FormField>
-          <FormField>
-            <InputLabel>Image URL</InputLabel>
-            <Input
-              type="url"
-              value={newProduct.image}
-              onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
-              required
-            />
-          </FormField>
-          <SubmitButton type="submit" variant="primary">Add Product</SubmitButton>
-        </Form>
-      </FormContainer>
+<FormContainer>
+  <FormTitle>Add New Product</FormTitle>
+  <Form onSubmit={addProduct}>
+    <FormField>
+      <InputLabel>Product Name</InputLabel>
+      <Input
+        type="text"
+        value={newProduct.name}
+        onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+        required
+      />
+    </FormField>
+
+    <FormField>
+      <InputLabel>Description</InputLabel>
+      <Input
+        type = "text"
+        value={newProduct.description}
+        onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+        required
+      />
+    </FormField>
+
+    <FormField>
+      <InputLabel>Price</InputLabel>
+      <Input
+        type="number"
+        value={newProduct.price}
+        onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+        required
+      />
+    </FormField>
+
+    <FormField>
+      <InputLabel>Category</InputLabel>
+      <Input
+        type="text"
+        value={newProduct.category}
+        onChange={(e) => setNewProduct({ ...newProduct, category: e.target.value })}
+        required
+      />
+    </FormField>
+
+    <FormField>
+      <InputLabel>Image URL</InputLabel>
+      <Input
+        type="url"
+        value={newProduct.image}
+        onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
+        required
+      />
+    </FormField>
+
+    <SubmitButton type="submit" variant="primary">Add Product</SubmitButton>
+  </Form>
+</FormContainer>
+
 
       {/* Product Table */}
       <TableContainer>
